@@ -1,8 +1,8 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { VERSION } from '@angular/core';
-import * as dwv from 'dwv';
-import { MatDialog } from '@angular/material/dialog';
-import { TagsDialogComponent } from './tags-dialog.component';
+import { Component, OnInit, ViewEncapsulation } from "@angular/core";
+import { VERSION } from "@angular/core";
+import * as dwv from "dwv";
+import { MatDialog } from "@angular/material/dialog";
+import { TagsDialogComponent } from "./tags-dialog.component";
 
 // gui overrides
 
@@ -13,33 +13,50 @@ dwv.gui.prompt = prompt;
 
 // Image decoders (for web workers)
 dwv.image.decoderScripts = {
-    jpeg2000: 'assets/dwv/decoders/pdfjs/decode-jpeg2000.js',
-    'jpeg-lossless': 'assets/dwv/decoders/rii-mango/decode-jpegloss.js',
-    'jpeg-baseline': 'assets/dwv/decoders/pdfjs/decode-jpegbaseline.js',
-    rle: 'assets/dwv/decoders/dwv/decode-rle.js'
+  jpeg2000: "assets/dwv/decoders/pdfjs/decode-jpeg2000.js",
+  "jpeg-lossless": "assets/dwv/decoders/rii-mango/decode-jpegloss.js",
+  "jpeg-baseline": "assets/dwv/decoders/pdfjs/decode-jpegbaseline.js",
+  rle: "assets/dwv/decoders/dwv/decode-rle.js",
 };
 
 @Component({
-  selector: 'app-dwv',
-  templateUrl: './dwv.component.html',
-  styleUrls: ['./dwv.component.scss'],
-  encapsulation: ViewEncapsulation.None
+  selector: "app-dwv",
+  templateUrl: "./dwv.component.html",
+  styleUrls: ["./dwv.component.scss"],
+  encapsulation: ViewEncapsulation.None,
 })
-
 export class DwvComponent implements OnInit {
   public versions: any;
+  public options = [
+    "Arrow",
+    "Circle",
+    "Ellipse",
+    "FreeHand",
+    "Protractor",
+    "Rectangle",
+    "Roi",
+    "Ruler",
+  ];
+  // Change Here to activate different mode in Draw i had tried it but failed to implement options.
+  state:any = this.options[3]
+  // onChangeDraw = (draw:string) =>{
+  //   console.log(draw)
+  //   this.state = draw
+  // }
+
   public tools = {
+    Draw: {
+      options: [this.state],
+      type: "factory",
+      events: ["drawcreate", "drawchange", "drawmove", "drawdelete"],
+    },
       Scroll: {},
       ZoomAndPan: {},
       WindowLevel: {},
-      Draw: {
-          options: ['Ruler'],
-          type: 'factory',
-          events: ['drawcreate', 'drawchange', 'drawmove', 'drawdelete']
-      }
   };
+
   public toolNames: string[];
-  public selectedTool = 'Select Tool';
+  public selectedTool = "Select Tool";
   public loadProgress = 0;
   public dataLoaded = false;
 
@@ -47,15 +64,15 @@ export class DwvComponent implements OnInit {
   private metaData: any[];
 
   // drop box class name
-  private dropboxDivId = 'dropBox';
-  private dropboxClassName = 'dropBox';
-  private borderClassName = 'dropBoxBorder';
-  private hoverClassName = 'hover';
+  private dropboxDivId = "dropBox";
+  private dropboxClassName = "dropBox";
+  private borderClassName = "dropBoxBorder";
+  private hoverClassName = "hover";
 
   constructor(public dialog: MatDialog) {
     this.versions = {
       dwv: dwv.getVersion(),
-      angular: VERSION.full
+      angular: VERSION.full,
     };
   }
 
@@ -64,14 +81,14 @@ export class DwvComponent implements OnInit {
     this.dwvApp = new dwv.App();
     // initialise app
     this.dwvApp.init({
-      containerDivId: 'dwv',
-      tools: this.tools
+      containerDivId: "dwv",
+      tools: this.tools,
     });
     // handle load events
     let nLoadItem = null;
     let nReceivedError = null;
     let nReceivedAbort = null;
-    this.dwvApp.addEventListener('loadstart', (/*event*/) => {
+    this.dwvApp.addEventListener("loadstart", (/*event*/) => {
       // reset flags
       this.dataLoaded = false;
       nLoadItem = 0;
@@ -80,18 +97,20 @@ export class DwvComponent implements OnInit {
       // hide drop box
       this.showDropbox(false);
     });
-    this.dwvApp.addEventListener('loadprogress', (event) => {
+    this.dwvApp.addEventListener("loadprogress", (event) => {
       this.loadProgress = event.loaded;
     });
-    this.dwvApp.addEventListener('load', (/*event*/) => {
+    this.dwvApp.addEventListener("load", (/*event*/) => {
       // set dicom tags
       this.metaData = dwv.utils.objectToArray(this.dwvApp.getMetaData());
       // available tools
       this.toolNames = [];
       for (const key in this.tools) {
-        if ((key === 'Scroll' && this.dwvApp.canScroll()) ||
-          (key === 'WindowLevel' && this.dwvApp.canWindowLevel()) ||
-          (key !== 'Scroll' && key !== 'WindowLevel')) {
+        if (
+          (key === "Scroll" && this.dwvApp.canScroll()) ||
+          (key === "WindowLevel" && this.dwvApp.canWindowLevel()) ||
+          (key !== "Scroll" && key !== "WindowLevel")
+        ) {
           this.toolNames.push(key);
         }
       }
@@ -99,10 +118,10 @@ export class DwvComponent implements OnInit {
       // set data loaded flag
       this.dataLoaded = true;
     });
-    this.dwvApp.addEventListener('loadend', (/*event*/) => {
+    this.dwvApp.addEventListener("loadend", (/*event*/) => {
       if (nReceivedError) {
         this.loadProgress = 0;
-        alert('Received errors during load. Check log for details.');
+        alert("Received errors during load. Check log for details.");
         // show drop box if nothing has been loaded
         if (!nLoadItem) {
           this.showDropbox(true);
@@ -110,27 +129,27 @@ export class DwvComponent implements OnInit {
       }
       if (nReceivedAbort) {
         this.loadProgress = 0;
-        alert('Load was aborted.');
+        alert("Load was aborted.");
         this.showDropbox(true);
       }
     });
-    this.dwvApp.addEventListener('loaditem', (/*event*/) => {
+    this.dwvApp.addEventListener("loaditem", (/*event*/) => {
       ++nLoadItem;
     });
-    this.dwvApp.addEventListener('error', (event) => {
+    this.dwvApp.addEventListener("error", (event) => {
       console.error(event.error);
       ++nReceivedError;
     });
-    this.dwvApp.addEventListener('abort', (/*event*/) => {
+    this.dwvApp.addEventListener("abort", (/*event*/) => {
       ++nReceivedAbort;
     });
 
     // handle key events
-    this.dwvApp.addEventListener('keydown', (event) => {
-        this.dwvApp.defaultOnKeydown(event);
+    this.dwvApp.addEventListener("keydown", (event) => {
+      this.dwvApp.defaultOnKeydown(event);
     });
     // handle window resize
-    window.addEventListener('resize', this.dwvApp.onResize);
+    window.addEventListener("resize", this.dwvApp.onResize);
 
     // setup drop box
     this.setupDropbox();
@@ -144,49 +163,48 @@ export class DwvComponent implements OnInit {
    * @param tool The new tool name.
    */
   onChangeTool = (tool: string) => {
-    if ( this.dwvApp ) {
+    if (this.dwvApp) {
       this.selectedTool = tool;
       this.dwvApp.setTool(tool);
-      if (tool === 'Draw') {
+      if (tool === "Draw") {
         this.onChangeShape(this.tools.Draw.options[0]);
       }
     }
-  }
+  };
 
+ 
   /**
    * Handle a change draw shape event.
    * @param shape The new shape name.
    */
   private onChangeShape = (shape: string) => {
-    if ( this.dwvApp && this.selectedTool === 'Draw') {
+    if (this.dwvApp && this.selectedTool === "Draw") {
       this.dwvApp.setDrawShape(shape);
     }
-  }
+  };
 
   /**
    * Handle a reset event.
    */
   onReset = () => {
-    if ( this.dwvApp ) {
+    if (this.dwvApp) {
       this.dwvApp.resetDisplay();
     }
-  }
+  };
 
   /**
    * Open the DICOM tags dialog.
    */
   openTagsDialog = () => {
-    this.dialog.open(TagsDialogComponent,
-      {
-        width: '80%',
-        height: '90%',
-        data: {
-          title: 'DICOM Tags',
-          value: this.metaData
-        }
-      }
-    );
-  }
+    this.dialog.open(TagsDialogComponent, {
+      width: "80%",
+      height: "90%",
+      data: {
+        title: "DICOM Tags",
+        value: this.metaData,
+      },
+    });
+  };
 
   // drag and drop [begin] -----------------------------------------------------
 
@@ -195,7 +213,7 @@ export class DwvComponent implements OnInit {
    */
   private setupDropbox = () => {
     this.showDropbox(true);
-  }
+  };
 
   /**
    * Default drag event handling.
@@ -205,7 +223,7 @@ export class DwvComponent implements OnInit {
     // prevent default handling
     event.stopPropagation();
     event.preventDefault();
-  }
+  };
 
   /**
    * Handle a drag over.
@@ -216,9 +234,9 @@ export class DwvComponent implements OnInit {
     // update box border
     const box = document.getElementById(this.dropboxDivId);
     if (box && box.className.indexOf(this.hoverClassName) === -1) {
-        box.className += ' ' + this.hoverClassName;
+      box.className += " " + this.hoverClassName;
     }
-  }
+  };
 
   /**
    * Handle a drag leave.
@@ -229,9 +247,9 @@ export class DwvComponent implements OnInit {
     // update box border
     const box = document.getElementById(this.dropboxDivId);
     if (box && box.className.indexOf(this.hoverClassName) !== -1) {
-        box.className = box.className.replace(' ' + this.hoverClassName, '');
+      box.className = box.className.replace(" " + this.hoverClassName, "");
     }
-  }
+  };
 
   /**
    * Handle a drop event.
@@ -241,8 +259,8 @@ export class DwvComponent implements OnInit {
     this.defaultHandleDragEvent(event);
     // load files
     this.dwvApp.loadFiles(event.dataTransfer.files);
-  }
-  
+  };
+
   /**
    * Show/hide the data load drop box.
    * @param show True to show the drop box.
@@ -250,51 +268,53 @@ export class DwvComponent implements OnInit {
   private showDropbox = (show: boolean) => {
     const box = document.getElementById(this.dropboxDivId);
     const isBoxShown = box && box.offsetHeight !== 0;
-    const layerDiv = this.dwvApp?.getElement('layerContainer');
+    const layerDiv = this.dwvApp?.getElement("layerContainer");
 
     if (box) {
       if (show && !isBoxShown) {
         // reset css class
-        box.className = this.dropboxClassName + ' ' + this.borderClassName;
+        box.className = this.dropboxClassName + " " + this.borderClassName;
         // check content
-        if (box.innerHTML === '') {
-          const p = document.createElement('p');
-          p.appendChild(document.createTextNode('Drag and drop data here'));
+        if (box.innerHTML === "") {
+          const p = document.createElement("p");
+          p.appendChild(document.createTextNode("Drag and drop data here"));
           box.appendChild(p);
         }
         // show box
-        box.setAttribute('style', 'visible:true;width:50%;height:75%');
+        box.setAttribute("style", "visible:true;width:50%;height:75%");
         // stop layer listening
         if (layerDiv) {
-          layerDiv.removeEventListener('dragover', this.defaultHandleDragEvent);
-          layerDiv.removeEventListener('dragleave', this.defaultHandleDragEvent);
-          layerDiv.removeEventListener('drop', this.onDrop);
+          layerDiv.removeEventListener("dragover", this.defaultHandleDragEvent);
+          layerDiv.removeEventListener(
+            "dragleave",
+            this.defaultHandleDragEvent
+          );
+          layerDiv.removeEventListener("drop", this.onDrop);
         }
         // listen to box events
-        box.addEventListener('dragover', this.onBoxDragOver);
-        box.addEventListener('dragleave', this.onBoxDragLeave);
-        box.addEventListener('drop', this.onDrop);
+        box.addEventListener("dragover", this.onBoxDragOver);
+        box.addEventListener("dragleave", this.onBoxDragLeave);
+        box.addEventListener("drop", this.onDrop);
       } else {
         // remove border css class
         box.className = this.dropboxClassName;
         // remove content
-        box.innerHTML = '';
+        box.innerHTML = "";
         // hide box
-        box.setAttribute('style', 'visible:false;width:0;height:0');
+        box.setAttribute("style", "visible:false;width:0;height:0");
         // stop box listening
-        box.removeEventListener('dragover', this.onBoxDragOver);
-        box.removeEventListener('dragleave', this.onBoxDragLeave);
-        box.removeEventListener('drop', this.onDrop);
+        box.removeEventListener("dragover", this.onBoxDragOver);
+        box.removeEventListener("dragleave", this.onBoxDragLeave);
+        box.removeEventListener("drop", this.onDrop);
         // listen to layer events
         if (layerDiv) {
-          layerDiv.addEventListener('dragover', this.defaultHandleDragEvent);
-          layerDiv.addEventListener('dragleave', this.defaultHandleDragEvent);
-          layerDiv.addEventListener('drop', this.onDrop);
+          layerDiv.addEventListener("dragover", this.defaultHandleDragEvent);
+          layerDiv.addEventListener("dragleave", this.defaultHandleDragEvent);
+          layerDiv.addEventListener("drop", this.onDrop);
         }
       }
     }
-  }
+  };
 
   // drag and drop [end] -------------------------------------------------------
-
 }
